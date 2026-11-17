@@ -259,6 +259,8 @@ class NetDevice : public Object
      *  to the specified destination Address
      *
      * @return whether the Send operation succeeded
+     *
+     * 让设备向指定的链路层目的地址发送数据包。
      */
     virtual bool Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber) = 0;
     /**
@@ -273,6 +275,8 @@ class NetDevice : public Object
      *  with the specified source and destination Addresses.
      *
      * @return whether the Send operation succeeded
+     *
+     * 发送数据包，并显式指定链路层源地址。
      */
     virtual bool SendFrom(Ptr<Packet> packet,
                           const Address& source,
@@ -341,6 +345,8 @@ class NetDevice : public Object
      *
      * Set the callback to be used to notify higher layers when a packet has been
      * received.
+     *
+     * SetReceiveCallback()：设置正常接收数据包时，向上层交付数据的回调。
      */
     virtual void SetReceiveCallback(ReceiveCallback cb) = 0;
 
@@ -374,6 +380,8 @@ class NetDevice : public Object
      * packets means _all_ packets, including those packets that can be
      * sensed by the netdevice but which are intended to be received by
      * other hosts.
+     *
+     * SetPromiscReceiveCallback()：设置混杂模式下的接收回调。
      */
     virtual void SetPromiscReceiveCallback(PromiscReceiveCallback cb) = 0;
 

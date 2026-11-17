@@ -29,6 +29,17 @@ class Node;
  * PcapUserHelperForDevice and AsciiTraceUserHelperForDevice are
  * "mixins".
  */
+
+/* 3 factories 及其默认属性的设置函数
+ * - Queue
+ * - Device
+ * - Channel
+ *
+ * Install 函数: 各种方式提供两个 Node, 然后连接到一起
+ *
+ *
+ * 这里继承了两个 TraceHelper 的
+ * */
 class PointToPointHelper : public PcapHelperForDevice, public AsciiTraceHelperForDevice
 {
   public:

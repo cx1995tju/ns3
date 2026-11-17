@@ -150,7 +150,7 @@ void
 NetDeviceQueue::SetQueueLimits(Ptr<QueueLimits> ql)
 {
     NS_LOG_FUNCTION(this << ql);
-    m_queueLimits = ql;
+    m_queueLimits = ql; // QueueLimits
 }
 
 Ptr<QueueLimits>

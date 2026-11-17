@@ -123,12 +123,16 @@ Node::GetSystemId() const
 uint32_t
 Node::AddDevice(Ptr<NetDevice> device)
 {
+    // node 里保存 device, 然后对 device 做一些初始化
+    // - device -> Node
+    // - device 分配 index
     NS_LOG_FUNCTION(this << device);
     uint32_t index = m_devices.size();
     m_devices.push_back(device);
     device->SetNode(this);
     device->SetIfIndex(index);
     device->SetReceiveCallback(MakeCallback(&Node::NonPromiscReceiveFromDevice, this));
+    // 在事件 0 调度其 Initialize() 函数
     Simulator::ScheduleWithContext(GetId(), Seconds(0), &NetDevice::Initialize, device);
     NotifyDeviceAdded(device);
     return index;
@@ -156,6 +160,7 @@ Node::AddApplication(Ptr<Application> application)
     uint32_t index = m_applications.size();
     m_applications.push_back(application);
     application->SetNode(this);
+    // 时间 0 调度 Application 的 Initialize() 函数
     Simulator::ScheduleWithContext(GetId(), Seconds(0), &Application::Initialize, application);
     return index;
 }

@@ -224,16 +224,28 @@ PointToPointHelper::Install(NodeContainer c)
     return Install(c.Get(0), c.Get(1));
 }
 
+// 修改了 两个 Node, 两个 Node 没有保存到这个 Helper 类里的
+//
+// 1. 创建两个 PointToPointDevice
+// 2. 给每个 Node 添加一个 Device
+// 3. 每个 Device 搞一个 Queue
+// 4. 创建一个 PointToPointChannel, 然后将两个 Device 连接上去
+//
+// 如果 enable flow control 功能, 每个 device 需要 Aggregate 一个 NetDeviceQueueInterface 结构
+//
 NetDeviceContainer
 PointToPointHelper::Install(Ptr<Node> a, Ptr<Node> b)
 {
     NetDeviceContainer container;
 
     Ptr<PointToPointNetDevice> devA = m_deviceFactory.Create<PointToPointNetDevice>();
+
     devA->SetAddress(Mac48Address::Allocate());
-    a->AddDevice(devA);
+    a->AddDevice(devA); // 建立 device 和 node 的关系
+
     Ptr<Queue<Packet>> queueA = m_queueFactory.Create<Queue<Packet>>();
-    devA->SetQueue(queueA);
+    devA->SetQueue(queueA); // devA 上搞一个 queueA
+
     Ptr<PointToPointNetDevice> devB = m_deviceFactory.Create<PointToPointNetDevice>();
     devB->SetAddress(Mac48Address::Allocate());
     b->AddDevice(devB);
@@ -242,6 +254,7 @@ PointToPointHelper::Install(Ptr<Node> a, Ptr<Node> b)
     if (m_enableFlowControl)
     {
         // Aggregate NetDeviceQueueInterface objects
+        // 暴露一个队列管理的 接口
         Ptr<NetDeviceQueueInterface> ndqiA = CreateObject<NetDeviceQueueInterface>();
         ndqiA->GetTxQueue(0)->ConnectQueueTraces(queueA);
         devA->AggregateObject(ndqiA);

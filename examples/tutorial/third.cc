@@ -59,6 +59,7 @@ main(int argc, char* argv[])
         LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
     }
 
+    // XXX: p2p topo
     NodeContainer p2pNodes;
     p2pNodes.Create(2);
 
@@ -69,8 +70,9 @@ main(int argc, char* argv[])
     NetDeviceContainer p2pDevices;
     p2pDevices = pointToPoint.Install(p2pNodes);
 
+    // XXX: csma topo
     NodeContainer csmaNodes;
-    csmaNodes.Add(p2pNodes.Get(1));
+    csmaNodes.Add(p2pNodes.Get(1)); // 这个 node 充当了 router 的作用
     csmaNodes.Create(nCsma);
 
     CsmaHelper csma;
@@ -80,6 +82,7 @@ main(int argc, char* argv[])
     NetDeviceContainer csmaDevices;
     csmaDevices = csma.Install(csmaNodes);
 
+    // XXX: wifi topo
     NodeContainer wifiStaNodes;
     wifiStaNodes.Create(nWifi);
     NodeContainer wifiApNode = p2pNodes.Get(0);
@@ -125,6 +128,7 @@ main(int argc, char* argv[])
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(wifiApNode);
 
+    // XXX: stack
     InternetStackHelper stack;
 
     // Disabling IPv6 because it is not necessary to show what we want to demonstrate here.

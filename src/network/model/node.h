@@ -41,6 +41,16 @@ class Time;
  *   - a system Id: a unique Id used for parallel simulations.
  *
  * Every Node created is added to the NodeList automatically.
+ *
+ * Node:
+ * - 管理节点上的设备和应用
+ * - 把事件投递给注册的回调
+ *
+ *
+ * - AddDevice()                         把网络设备加入节点，并接通设备向节点交付数据包的路径
+ * - AddApplication()                    把应用加入节点，安排应用初始化
+ * - RegisterProtocolHandler()           注册“收到某种协议的数据包时，调用谁”
+ * - RegisterDeviceAdditionListener()    注册“节点加入设备时，通知谁”
  */
 class Node : public Object
 {
@@ -164,6 +174,8 @@ class Node : public Object
      *        value is zero, the handler is attached to all
      *        devices on this node.
      * @param promiscuous whether to register a promiscuous mode handler
+     *
+     *  注册“收到某种协议的数据包时，调用谁”
      */
     void RegisterProtocolHandler(ProtocolHandler handler,
                                  uint16_t protocolType,
@@ -187,6 +199,8 @@ class Node : public Object
      * Add a new listener to the list of listeners for the device-added
      * event. When a new listener is added, it is notified of the existence
      * of all already-added devices to make discovery of devices easier.
+     *
+     * 注册“节点加入设备时，通知谁”
      */
     void RegisterDeviceAdditionListener(DeviceAdditionListener listener);
     /**

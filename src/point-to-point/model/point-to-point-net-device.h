@@ -48,6 +48,54 @@ class ErrorModel;
  * Key parameters or objects that can be specified for this device
  * include a queue, data rate, and interframe transmission gap (the
  * propagation delay is set in the PointToPointChannel).
+ *
+ * 属性:
+ * - DataRate
+ * - InterframeGap
+ * - Queue
+ * - IfIndex
+ * - Address
+ * - MTU
+ * - Link up/down
+ * - broadcast/multicast support
+ *
+ * 重要接口
+ * pubic:
+ * - Attach(channel)
+ * - Receive(): 这不是给上层应用调用的, 是给 channel 调用的, 上层应用通过 m_rxcallback 来收包
+ * - Send(): 让上层调用来发送报文:
+ * - SendFrom(): 可以提供 source 地址
+ * - SetReceiveCallback(): 设备向啥功能交付报文时 call 壮烈注册的回调 m_rxCallback()
+ * - SetReceiveErrorModel(): 设备接收到报文后, 用这里注册的 callback 来判断报文是否损坏 m_receiveErrorModel
+ *
+ * private:
+ * - AddHeader()
+ * - ProcessHeader()
+ * - TransmitStart()
+ * - TransmitComplete()
+ *
+ * 各种 Trace Source:
+ * - m_macTxTrace
+ * - m_macTxDropTrace
+ * - m_macPromiscRxTrace
+ * - m_macRxTrace
+ * - m_macRxDropTrace
+ * - m_phyTxBeginTrace
+ * - m_phyTxEndTrace
+ * - m_phyTxDropTrace
+ * - m_phyRxBeginTrace
+ * - m_phyRxEndTrace
+ * - m_phyRxDropTrace
+ * - m_snifferTrace
+ * - m_promiscSnifferTrace
+ *
+ *
+ * P2P 设备发送流程:
+ * - Send() -> AddHeader() -> Enqueue() -> TransmitStart()/TransmitComplete() -> 对端 Node Receive()
+ *
+ * P2P 接收流程:
+ * - Receive() -> 错误码检查 -> ProcessHeader() -> 接收回调 -> up layer
+ *
  */
 class PointToPointNetDevice : public NetDevice
 {
@@ -140,6 +188,9 @@ class PointToPointNetDevice : public NetDevice
      * arrived at the device.
      *
      * @param p Ptr to the received packet.
+     *
+     *
+     * 这不是给上层应用调用的, 是给 channel 调用的, 上层应用通过 m_rxcallback 来收包
      */
     virtual void Receive(Ptr<Packet> p);
 

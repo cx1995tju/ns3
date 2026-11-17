@@ -85,6 +85,7 @@ PointToPointChannel::TransmitStart(Ptr<const Packet> p, Ptr<PointToPointNetDevic
 
     uint32_t wire = src == m_link[0].m_src ? 0 : 1;
 
+    // 注意这里要使用 Context 的, 将 Context从发送节点的 Node 换成接收节点的 Node
     Simulator::ScheduleWithContext(m_link[wire].m_dst->GetNode()->GetId(),
                                    txTime + m_delay,
                                    &PointToPointNetDevice::Receive,

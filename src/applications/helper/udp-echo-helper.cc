@@ -17,7 +17,7 @@ namespace ns3
 {
 
 UdpEchoServerHelper::UdpEchoServerHelper(uint16_t port)
-    : ApplicationHelper(UdpEchoServer::GetTypeId())
+    : ApplicationHelper(UdpEchoServer::GetTypeId()) // 这里有一个初始化列表
 {
     SetAttribute("Port", UintegerValue(port));
 }
