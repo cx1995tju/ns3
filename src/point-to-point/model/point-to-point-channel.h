@@ -36,6 +36,14 @@ class Packet;
  *
  * @see Attach
  * @see TransmitStart
+ *
+ * - Attach() 将 device 连接到 channel
+ * - 调用其 TransmitStart 将报文投递给 Channel, Channel 会调用另一端 Node 的 Receive() 将 pkt 投递过去
+ *
+ *
+ * 属性
+ * - Delay: 信道传播延迟
+ *
  */
 class PointToPointChannel : public Channel
 {

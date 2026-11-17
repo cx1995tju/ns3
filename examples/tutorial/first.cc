@@ -25,33 +25,43 @@ main(int argc, char* argv[])
     CommandLine cmd(__FILE__);
     cmd.Parse(argc, argv);
 
+    // 分辨率
     Time::SetResolution(Time::NS);
     LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_INFO);
     LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
 
+    // XXX: Node
     NodeContainer nodes;
     nodes.Create(2);
 
+    // XXX: Channel
     PointToPointHelper pointToPoint;
     pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
     pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
 
+    // XXX: Device
+    // 为 node 创建 device, 然后将其和 channel 连接
     NetDeviceContainer devices;
     devices = pointToPoint.Install(nodes);
 
+    // XXX: Stack
     InternetStackHelper stack;
 
     // Disableing IPv6 because it is not necessary to show what we want to demonstrate here.
     // Note:Normal networks typically have both IPv4 and IPv6 enabled.
     stack.SetIpv6StackInstall(false);
 
+    // 赋予 Node ip 协议栈的能力
     stack.Install(nodes);
 
+    // XXX: Address
     Ipv4AddressHelper address;
     address.SetBase("10.1.1.0", "255.255.255.0");
 
+    // XXX: 一个 interface 让其可以操作 devices 上的 ip 地址. 可以看作 device 在 internet stack 侧的接口
     Ipv4InterfaceContainer interfaces = address.Assign(devices);
 
+    // XXX: Application
     UdpEchoServerHelper echoServer(9);
 
     ApplicationContainer serverApps = echoServer.Install(nodes.Get(1));
@@ -67,6 +77,11 @@ main(int argc, char* argv[])
     clientApps.Start(Seconds(2));
     clientApps.Stop(Seconds(10));
 
+    AsciiTraceHelper ascii;
+    pointToPoint.EnableAsciiAll(ascii.CreateFileStream("myfirst.tr"));
+
+
+    // XXX: Simulator
     Simulator::Run();
     Simulator::Destroy();
     return 0;

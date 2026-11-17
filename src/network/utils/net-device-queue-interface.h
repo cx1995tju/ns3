@@ -42,6 +42,36 @@ class QueueItem;
  * stopped or not) and data used by techniques such as Byte Queue Limits.
  *
  * This class roughly models the struct netdev_queue of Linux.
+ *
+ *
+ * 单个发送队列.
+ *
+ *
+ * 围绕一个核心问题: 上层现在能否向这个 发送队列发报文; 空间恢复后如何通知上层.
+ *
+ * 两个标记记录暂停原因
+ * - m_stoppedByDevice
+ * - m_stoppedByQueueLimits
+ *
+ * SetWakeCallback 用来设置恢复空间的时候通知谁
+ *
+ *
+ * QueueLimit 相关接口: 围绕 m_queueLimits 这个对象
+ * 接口                             作用
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * SetQueueLimits(ql)               保存一个队列限额控制对象
+ * ──────────────────────────────  ────────────────────────────────────────────────
+ * GetQueueLimits()                 返回当前限额对象
+ * ──────────────────────────────  ────────────────────────────────────────────────
+ * ResetQueueLimits()               调用限额对象的 Reset()，重置其内部状态
+ * ──────────────────────────────  ────────────────────────────────────────────────
+ * NotifyQueuedBytes(bytes)         报告新增的入队字节数，检查是否应暂停下发
+ * ──────────────────────────────  ────────────────────────────────────────────────
+ * NotifyTransmittedBytes(bytes)    报告已处理的字节数，更新限额并检查是否可以恢复
+ *
+ *
+ * ConnectQueueTraces() 将这里的控制逻辑和保存 packet 的 queue 关联起来
+ *
  */
 class NetDeviceQueue : public Object
 {
@@ -215,6 +245,9 @@ class NetDeviceQueue : public Object
  * - set the method used (by upper layers) to determine the transmission queue
  *   in which the netdevice would enqueue a given packet
  * NetDevice helpers create this interface and aggregate it to the device.
+ *
+ *
+ * 整个设备所有的发送队列的操作接口
  */
 class NetDeviceQueueInterface : public Object
 {

@@ -61,6 +61,7 @@ class Ipv6RoutingHelper;
  * encapsulates a general attribute or a set of functionality that
  * may be of interest to many other classes.
  *
+ * 给 每个 Node 增加了下述能力
  * This class aggregates instances of these objects, by default, to each node:
  *  - ns3::ArpL3Protocol
  *  - ns3::Ipv4L3Protocol

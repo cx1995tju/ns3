@@ -243,6 +243,7 @@ PointToPointNetDevice::TransmitStart(Ptr<Packet> p)
     Time txTime = m_bps.CalculateBytesTxTime(p->GetSize());
     Time txCompleteTime = txTime + m_tInterframeGap;
 
+    // 根据速率计算出一个调度的时间. 下次再来调度
     NS_LOG_LOGIC("Schedule TransmitCompleteEvent in " << txCompleteTime.As(Time::S));
     Simulator::Schedule(txCompleteTime, &PointToPointNetDevice::TransmitComplete, this);
 

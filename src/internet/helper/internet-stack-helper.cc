@@ -317,6 +317,10 @@ InternetStackHelper::Install(Ptr<Node> node) const
     if (m_ipv4Enabled)
     {
         /* IPv4 stack */
+        // 给 Node 聚合了
+        // - ArpL3Protocol
+        // - Ipv4L3Protocol
+        // - Icmpv4L4Protocol
         CreateAndAggregateObjectFromTypeId(node, "ns3::ArpL3Protocol");
         CreateAndAggregateObjectFromTypeId(node, "ns3::Ipv4L3Protocol");
         CreateAndAggregateObjectFromTypeId(node, "ns3::Icmpv4L4Protocol");
@@ -332,6 +336,7 @@ InternetStackHelper::Install(Ptr<Node> node) const
         Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
         if (!ipv4->GetRoutingProtocol())
         {
+            // 安装路由协议
             Ptr<Ipv4RoutingProtocol> ipv4Routing = m_routing->Create(node);
             ipv4->SetRoutingProtocol(ipv4Routing);
         }

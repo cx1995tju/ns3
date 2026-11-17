@@ -17,6 +17,8 @@
 //    point-to-point  |    |    |    |
 //                    ================
 //                      LAN 10.1.2.0
+//
+//  n1 是 router
 
 using namespace ns3;
 
@@ -42,13 +44,17 @@ main(int argc, char* argv[])
 
     nCsma = nCsma == 0 ? 1 : nCsma;
 
+
+    // XXX: Node containers
     NodeContainer p2pNodes;
     p2pNodes.Create(2);
 
     NodeContainer csmaNodes;
     csmaNodes.Add(p2pNodes.Get(1));
-    csmaNodes.Create(nCsma);
+    csmaNodes.Create(nCsma); // 追加节点
 
+
+    // XXX: 建立了 P2P topo
     PointToPointHelper pointToPoint;
     pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
     pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
@@ -56,6 +62,8 @@ main(int argc, char* argv[])
     NetDeviceContainer p2pDevices;
     p2pDevices = pointToPoint.Install(p2pNodes);
 
+    //
+    // XXX: 建立了 csma topo
     CsmaHelper csma;
     csma.SetChannelAttribute("DataRate", StringValue("100Mbps"));
     csma.SetChannelAttribute("Delay", TimeValue(NanoSeconds(6560)));
@@ -69,9 +77,11 @@ main(int argc, char* argv[])
     // Note: Normal networks typically have both IPv4 and IPv6 enabled.
     stack.SetIpv6StackInstall(false);
 
+    // 节点上安装 stack
     stack.Install(p2pNodes.Get(0));
     stack.Install(csmaNodes);
 
+    // n1 在两个 topo 中都出现, 所以安装了两个地址
     Ipv4AddressHelper address;
     address.SetBase("10.1.1.0", "255.255.255.0");
     Ipv4InterfaceContainer p2pInterfaces;
@@ -96,8 +106,11 @@ main(int argc, char* argv[])
     clientApps.Start(Seconds(2));
     clientApps.Stop(Seconds(10));
 
+    // 自动生成路由, 如果拓扑更改了, 可以调用 RecomputeRoutingTables()
+    // 会自己遍历 NodeList 找到有 ipv4 能力的节点, 来计算路由
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
+    // pcap tracing
     pointToPoint.EnablePcapAll("second");
     csma.EnablePcap("second", csmaDevices.Get(1), true);
 
