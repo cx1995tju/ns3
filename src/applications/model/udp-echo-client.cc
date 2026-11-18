@@ -177,7 +177,7 @@ void
 UdpEchoClient::DoStartApplication()
 {
     NS_LOG_FUNCTION(this);
-    m_socket->SetRecvCallback(MakeCallback(&UdpEchoClient::HandleRead, this));
+    m_socket->SetRecvCallback(MakeCallback(&UdpEchoClient::HandleRead, this)); // 接收函数
     m_socket->SetAllowBroadcast(true);
     ScheduleTransmit(Time(0));
 }
@@ -294,6 +294,7 @@ UdpEchoClient::ScheduleTransmit(Time dt)
 void
 UdpEchoClient::Send()
 {
+    // 发包了
     NS_LOG_FUNCTION(this);
 
     NS_ASSERT(m_sendEvent.IsExpired());

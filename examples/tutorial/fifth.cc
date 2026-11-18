@@ -95,14 +95,16 @@ main(int argc, char* argv[])
     nodes.Create(2);
 
     PointToPointHelper pointToPoint;
-    pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
-    pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
+    pointToPoint.SetDeviceAttribute("DataRate", StringValue("400Gbps"));
+    pointToPoint.SetChannelAttribute("Delay", StringValue("1us"));
 
     NetDeviceContainer devices;
     devices = pointToPoint.Install(nodes);
 
+    // 按照错误概率来判断数据包是否损坏
     Ptr<RateErrorModel> em = CreateObject<RateErrorModel>();
-    em->SetAttribute("ErrorRate", DoubleValue(0.00001));
+    em->SetAttribute("ErrorRate", DoubleValue(0.0001));
+    // 即给这个 device 注入了 0.00001 的错误概率
     devices.Get(1)->SetAttribute("ReceiveErrorModel", PointerValue(em));
 
     InternetStackHelper stack;
@@ -126,17 +128,19 @@ main(int argc, char* argv[])
     sinkApps.Stop(Seconds(20.));
 
     Ptr<Socket> ns3TcpSocket = Socket::CreateSocket(nodes.Get(0), TcpSocketFactory::GetTypeId());
+    // trace 这个 socket 上的 cwnd 变化, TcpSocketBase
     ns3TcpSocket->TraceConnectWithoutContext("CongestionWindow", MakeCallback(&CwndChange));
 
     Ptr<TutorialApp> app = CreateObject<TutorialApp>();
-    app->Setup(ns3TcpSocket, sinkAddress, 1040, 1000, DataRate("1Mbps"));
+    app->Setup(ns3TcpSocket, sinkAddress, 1040, 1000, DataRate("400Gbps"));
     nodes.Get(0)->AddApplication(app);
     app->SetStartTime(Seconds(1.));
-    app->SetStopTime(Seconds(20.));
+    app->SetStopTime(Seconds(200.));
 
+    // ref: point-to-point-net-device.cc
     devices.Get(1)->TraceConnectWithoutContext("PhyRxDrop", MakeCallback(&RxDrop));
 
-    Simulator::Stop(Seconds(20));
+    Simulator::Stop(Seconds(200));
     Simulator::Run();
     Simulator::Destroy();
 

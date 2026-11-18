@@ -39,7 +39,7 @@ class MyObject : public Object
     {
     }
 
-    TracedValue<int32_t> m_myInt; //!< The traced value.
+    TracedValue<int32_t> m_myInt; //!< The traced value., 这是特别定义的类型, 该值被修改的时候, 会触发 Trace 的
 };
 
 void
@@ -55,6 +55,9 @@ main(int argc, char* argv[])
     myObject->TraceConnectWithoutContext("MyInteger", MakeCallback(&IntTrace));
 
     myObject->m_myInt = 1234;
+
+    myObject->m_myInt = 1235;
+    myObject->m_myInt = 1236;
 
     return 0;
 }

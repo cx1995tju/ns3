@@ -96,7 +96,7 @@ UdpEchoServer::DoStartApplication()
         }
     }
     m_socket->SetIpTos(m_tos); // Affects only IPv4 sockets.
-    m_socket->SetRecvCallback(MakeCallback(&UdpEchoServer::HandleRead, this));
+    m_socket->SetRecvCallback(MakeCallback(&UdpEchoServer::HandleRead, this)); // 接收函数
 
     if (m_local.IsInvalid())
     {
