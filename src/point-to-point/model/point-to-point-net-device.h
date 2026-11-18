@@ -66,7 +66,7 @@ class ErrorModel;
  * - Send(): 让上层调用来发送报文:
  * - SendFrom(): 可以提供 source 地址
  * - SetReceiveCallback(): 设备向啥功能交付报文时 call 壮烈注册的回调 m_rxCallback()
- * - SetReceiveErrorModel(): 设备接收到报文后, 用这里注册的 callback 来判断报文是否损坏 m_receiveErrorModel
+ * - SetReceiveErrorModel(): 设备接收到报文后, 用这里注册的 callback 来判断报文是否损坏 m_receiveErrorModel. 上层类可以设置这个函数. 比如设置一个按照概率标记错误的 callback, 就可以注入错误了.
  *
  * private:
  * - AddHeader()

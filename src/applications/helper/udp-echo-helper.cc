@@ -17,7 +17,7 @@ namespace ns3
 {
 
 UdpEchoServerHelper::UdpEchoServerHelper(uint16_t port)
-    : ApplicationHelper(UdpEchoServer::GetTypeId()) // 这里有一个初始化列表
+    : ApplicationHelper(UdpEchoServer::GetTypeId()) // 这里有一个构造函数初始化列表, 将这个类型给父类的构造函数了.
 {
     SetAttribute("Port", UintegerValue(port));
 }

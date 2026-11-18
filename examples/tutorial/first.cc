@@ -36,7 +36,9 @@ main(int argc, char* argv[])
 
     // XXX: Channel
     PointToPointHelper pointToPoint;
+    // DataRate 的实现是通过发包的时候控制发包时间实现的
     pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
+    // Delay 中 channel 控制将包投递给对端的时候实现的
     pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
 
     // XXX: Device
@@ -65,16 +67,17 @@ main(int argc, char* argv[])
     UdpEchoServerHelper echoServer(9);
 
     ApplicationContainer serverApps = echoServer.Install(nodes.Get(1));
-    serverApps.Start(Seconds(1));
+    serverApps.Start(Seconds(1)); // UdpEchoServer::DoStartApplication
     serverApps.Stop(Seconds(10));
 
+    // UdpEchoClient
     UdpEchoClientHelper echoClient(interfaces.GetAddress(1), 9);
     echoClient.SetAttribute("MaxPackets", UintegerValue(1));
     echoClient.SetAttribute("Interval", TimeValue(Seconds(1)));
     echoClient.SetAttribute("PacketSize", UintegerValue(1024));
 
     ApplicationContainer clientApps = echoClient.Install(nodes.Get(0));
-    clientApps.Start(Seconds(2));
+    clientApps.Start(Seconds(2)); // UdpEchoClient::DoStartApplication
     clientApps.Stop(Seconds(10));
 
     AsciiTraceHelper ascii;
