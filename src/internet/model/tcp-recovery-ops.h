@@ -45,6 +45,14 @@ class TcpSocketState;
  *
  * @see TcpClassicRecovery
  * @see DoRecovery
+ *
+ *
+ * 快速恢复算法:
+ * - EnterRecovery()
+ * - DoRecovery()
+ * - ExitRecovery()
+ * - UpdateBytesSent()
+ * - Fork()
  */
 class TcpRecoveryOps : public Object
 {

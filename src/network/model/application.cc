@@ -90,6 +90,7 @@ Application::DoInitialize()
     {
         m_stopEvent = Simulator::Schedule(m_stopTime, &Application::StopApplication, this);
     }
+    // ns3 对象框架, 要求要调用的
     Object::DoInitialize();
 }
 

@@ -132,7 +132,7 @@ Node::AddDevice(Ptr<NetDevice> device)
     device->SetNode(this);
     device->SetIfIndex(index);
     device->SetReceiveCallback(MakeCallback(&Node::NonPromiscReceiveFromDevice, this));
-    // 在事件 0 调度其 Initialize() 函数
+    // 在 time 0 调度 device Initialize() 函数
     Simulator::ScheduleWithContext(GetId(), Seconds(0), &NetDevice::Initialize, device);
     NotifyDeviceAdded(device);
     return index;

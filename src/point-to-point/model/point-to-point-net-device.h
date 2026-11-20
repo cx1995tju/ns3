@@ -488,6 +488,11 @@ class PointToPointNetDevice : public NetDevice
 
     Ptr<Packet> m_currentPkt; //!< Current packet processed
 
+
+
+    // 上层(ipv4, ipv6)会投递协议号过来, 其默认底层是 Ethernet, 用的是 Ethernet 规定的协议号, 比如: ipv4 0x0800
+    //
+    // 但是 PPP 协议的 Type 定义是不一样的, 所以这里要转换一下.
     /**
      * @brief PPP to Ethernet protocol number mapping
      * @param protocol A PPP protocol number

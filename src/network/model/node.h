@@ -51,6 +51,19 @@ class Time;
  * - AddApplication()                    把应用加入节点，安排应用初始化
  * - RegisterProtocolHandler()           注册“收到某种协议的数据包时，调用谁”
  * - RegisterDeviceAdditionListener()    注册“节点加入设备时，通知谁”
+ *
+ *
+ * ~Node~ 和 ~Channel~ 是核心结构:
+ *   - 绝大部分结构都是依附于 Node 的
+ *   - Channel 负责连接两个 Node 之间的 pkt 收发
+ *
+ * Node:
+ * - Device list 维护, 设置 Device: ~AddDevice()~
+ * - Application list 维护
+ * - rx: 使用 ProtocolHandler 将报文向上投递
+ *   - 向 Device 注册 callback ~Node::NonPromiscReceiveFromDevice~
+ *   - 然后通过 ProtocolHandler 向上投递
+ *
  */
 class Node : public Object
 {
