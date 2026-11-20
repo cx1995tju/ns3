@@ -82,6 +82,17 @@ class Channel;
  *       class
  *     + connects the DropBeforeEnqueue traced callback of the device queues to
  *       the PacketDiscarded static method of the NetDeviceQueue class
+ *
+ * XXX: 纯虚函数必须全部实现
+ *
+ * 属性:
+ * - 1 Channel
+ * - Address[es]
+ * - MTU
+ * - Link up/down
+ *   - link change callback
+ *
+ * - Send
  */
 class NetDevice : public Object
 {
@@ -296,6 +307,8 @@ class NetDevice : public Object
      * @param node the node associated to this netdevice.
      *
      * This method is called from ns3::Node::AddDevice.
+     *
+     * // 必须要实现的
      */
     virtual void SetNode(Ptr<Node> node) = 0;
 

@@ -104,8 +104,8 @@ UdpL4Protocol::NotifyNewAggregate()
 
     if (ipv4 && m_downTarget.IsNull())
     {
-        ipv4->Insert(this);
-        this->SetDownTarget(MakeCallback(&Ipv4::Send, ipv4));
+        ipv4->Insert(this); // 向 L3 注册 Receive(), 让下层可以 callback 上来
+        this->SetDownTarget(MakeCallback(&Ipv4::Send, ipv4)); // 注册 Send() callback, 后续调用 m_downTarget() 即可向下发送报文.
     }
     if (ipv6 && m_downTarget6.IsNull())
     {
@@ -463,6 +463,9 @@ UdpL4Protocol::Send(Ptr<Packet> packet,
 
     packet->AddHeader(udpHeader);
 
+    // ref: NotifyNewAggregate()
+    // Ipv4L3Protocol::Send()
+    // 送到 L3 了
     m_downTarget(packet, saddr, daddr, iana::internetprotocolnumbers::UDP, route);
 }
 

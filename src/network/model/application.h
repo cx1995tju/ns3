@@ -41,6 +41,18 @@ class Node;
  *
  * The main purpose of the base class application public API is to
  * provide a uniform way to start and stop applications.
+ *
+ * SetNode() 需要依附于 Node
+ *
+ * 启动停止
+ * - SetStartTime() / SetStopTime()
+ *
+ *
+ * 两个 callback
+ *
+ *
+ *
+ *
  */
 
 /**
@@ -103,12 +115,17 @@ class Application : public Object
      */
     virtual int64_t AssignStreams(int64_t stream);
 
+
+    // 供 Application 的Trace Source 使用的
+
     /**
      * @brief Common callback signature for packet delay and address.
      *
      * @param delay The packet delay.
      * @param from The source socket address associated with the packet,
      *             indicating the packet's origin.
+     *
+     * // 统计 delay 及其来源的
      */
     typedef void (*DelayAddressCallback)(const Time& delay, const Address& from);
 

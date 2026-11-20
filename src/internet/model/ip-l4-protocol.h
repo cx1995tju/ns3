@@ -36,6 +36,13 @@ class Ipv6Route;
  *
  * This is an abstract base class for layer four protocols which use IP as
  * the network layer.
+ *
+ *
+ * 一个 L4 希望接入 ip层, 需要继承这个结构
+ * - UdpL4Protocol
+ * - TcpL4Protocol
+ * - Icmpv4L4Protocol
+ * - Icmpv6L4Protocol
  */
 class IpL4Protocol : public Object
 {
@@ -71,6 +78,8 @@ class IpL4Protocol : public Object
      * @param header IPv4 Header information
      * @param incomingInterface the Ipv4Interface on which the packet arrived
      * @returns Rx status code
+     *
+     * ip 层向上层送包
      */
     virtual RxStatus Receive(Ptr<Packet> p,
                              const Ipv4Header& header,
@@ -137,6 +146,8 @@ class IpL4Protocol : public Object
 
     /**
      * @brief callback to send packets over IPv4
+     *
+     * 向 ip 层发包的回调
      */
     typedef Callback<void, Ptr<Packet>, Ipv4Address, Ipv4Address, uint8_t, Ptr<Ipv4Route>>
         DownTargetCallback;

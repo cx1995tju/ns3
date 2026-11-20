@@ -3529,7 +3529,7 @@ TcpSocketBase::SendPendingData(bool withAck)
         if (IsPacingEnabled())
         {
             NS_LOG_INFO("Pacing is enabled");
-            if (m_pacingTimer.IsRunning())
+            if (m_pacingTimer.IsRunning()) // pacing enable 且在 run, 那么不走这里发送了. 等到 pacing timer expire 才能走过这里去发送
             {
                 NS_LOG_INFO("Skipping Packet due to pacing" << m_pacingTimer.GetDelayLeft());
                 break;
@@ -3625,6 +3625,7 @@ TcpSocketBase::SendPendingData(bool withAck)
                     NS_LOG_DEBUG("Current Pacing Rate " << m_tcb->m_pacingRate);
                     NS_LOG_DEBUG("Timer is in expired state, activate it "
                                  << m_tcb->m_pacingRate.Get().CalculateBytesTxTime(sz));
+                    // 重新调度.
                     m_pacingTimer.Schedule(m_tcb->m_pacingRate.Get().CalculateBytesTxTime(sz));
                     break;
                 }
