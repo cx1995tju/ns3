@@ -89,6 +89,62 @@ FLOWS
 
 DCQCN 每次因 CNP 执行降速时，会重启恢复定时器并将两个阶段计数和累计字节清零。此后，每过 `RP_TIMER` 微秒或每发送 `RP_BYTE_RESET` 字节，对应的计数加一，再更新速率。设 `F = FAST_RECOVERY_TIMES`，两项计数都小于 `F` 时执行快速恢复，两项都大于 `F` 时使用 `RATE_HAI`，其余情况使用 `RATE_AI`。字节阈值为零时沿用移植前的定时器阶段规则。[DCQCN 论文图 7](https://acn-2025.github.io/papers/DCQCN.pdf)
 
+### 4.1 多交换机示例：两台 spine、两台 leaf、四台主机
+
+每台主机接一台 leaf，每台 leaf 各接两台 spine。主机 0、1 在同一机架，主机 2、3 在另一机架。全部八条链路均为双向 100 Gb/s，单向传播时延 1 µs。完整输入见 [spine-leaf 示例目录](mix/spine-leaf/)。
+
+```mermaid
+flowchart TB
+    S6[Spine 6] --- L4[Leaf 4]
+    S6 --- L5[Leaf 5]
+    S7[Spine 7] --- L4
+    S7 --- L5
+    L4 --- H0[主机 0]
+    L4 --- H1[主机 1]
+    L5 --- H2[主机 2]
+    L5 --- H3[主机 3]
+```
+
+[拓扑文件](mix/spine-leaf/topology.txt)首行 `8 4 8` 表示 8 个节点、4 台交换机、8 条链路。第二行 `4 5 6 7` 列出全部交换机。leaf 和 spine 的角色由接线决定。[流量文件](mix/spine-leaf/flow.txt)只写通信两端的主机 ID，中间交换机由仿真器查路由。仿真器按跳数计算最短路径，有多个等价下一跳时按流的源、目的 IP 和端口做 ECMP 哈希。
+
+完成第 1 节的构建后，从仓库根目录直接运行。示例自带配置、流量和跟踪节点清单。
+
+```bash
+fabric=$(mktemp -d)
+cp mix/spine-leaf/*.txt "$fabric/"
+./ns3 run --no-build --cwd="$fabric" scratch/hpcc/third -- config.txt
+wc -l "$fabric/fct.txt"
+make -s -C contrib/hpcc/analysis OUT="$fabric/bin"
+"$fabric/bin/trace_reader" "$fabric/mix.tr" 'nodeType=1&event=2&l3Prot=17&data.seq=0' | awk '{print $7, $8, $2}'
+```
+
+三个 100,000 字节的流间隔 100 µs 启动，完成后 `fct.txt` 应有三行。上面的过滤器只选各流首个 UDP 数据包在交换机的出队事件，依次打印源 IP、目的 IP 和交换机 ID。按输出顺序即可还原路径。本次运行得到下表。
+
+| 主机流向 | 首包经过的交换机 | 路径类型 |
+| --- | --- | --- |
+| 0 → 1 | leaf 4 | 同机架 |
+| 0 → 2 | leaf 4 → spine 6 → leaf 5 | 跨机架 |
+| 3 → 0 | leaf 5 → spine 7 → leaf 4 | 跨机架 |
+
+**换成随机流量。** 生成器的 `-n` 是参与通信的主机数。本例共 8 个节点，其中主机编号为 0 至 3，因此用 `-n 4 --first-host 0`。下面的命令在同一拓扑上运行新流量，并将结果写到另一个目录。随机抽取的主机对可能在同一机架，也可能跨机架。
+
+```bash
+random_fabric=$(mktemp -d)
+cp mix/spine-leaf/{config,topology,trace}.txt "$random_fabric/"
+gen=contrib/hpcc/traffic_gen
+python3 "$gen/traffic_gen.py" -c "$gen/AliStorage2019.txt" \
+  -n 4 --first-host 0 -b 100G -l 0.1 -t 0.0002 --seed 7 -o "$random_fabric/flow.txt"
+./ns3 run --no-build --cwd="$random_fabric" scratch/hpcc/third -- config.txt
+head -n 1 "$random_fabric/flow.txt"
+wc -l "$random_fabric/fct.txt"
+```
+
+使用上述种子生成了 27 条流，全部完成。
+
+扩展到更多机架时，在拓扑文件里补全交换机 ID 和链路，并同步更新首行的三个数量。若上行链路使用不同速率，还需在配置的 `KMIN_MAP`、`KMAX_MAP` 和 `PMAX_MAP` 中加入对应速率。当前 HPCC 的 INT 头最多记录一条数据路径上的 5 台交换机，本例的跨机架路径经过 3 台。
+
+如果主机编号分散，例如只有 `1、3、5、7` 是主机，可以直接在流量文件里使用这些 ID，也可以先按 `0–3` 生成，再把每行前两列按 `0→1、1→3、2→5、3→7` 映射成实际 ID。`--first-host` 只适用于连续编号。需要保证每条流都跨机架时，像本例的后两条流一样，从不同 leaf 下各选一个主机作为端点。
+
 ## 5. 按流大小分布生成流量
 
 生成器使用 Python 3 标准库。沿用第 2 节的 `repo` 和 `work`，下面的示例在自带星形拓扑中选主机 1、2、3，按 AliStorage 分布生成流量。它单独保存配置、trace 和 FCT，便于随后分析。
