@@ -10,9 +10,10 @@
 ./ns3 build -j4 scratch/hpcc/third test-runner
 ./test.py --no-build -s hpcc
 ./test.py --no-build -s devices-point-to-point
+python3 contrib/hpcc/test/test_tools.py
 ```
 
-两项测试都应报告 `PASS`。要查看 `hpcc` 套件中每个用例的名称和结果，执行 `./ns3 run --no-build "test-runner --suite=hpcc --verbose"`。
+两个 ns-3 套件应报告 `PASS`。Python 工具回归使用 Make 和 C++17 编译器，在临时目录构建并测试生成器和分析器，成功时报告 `OK`。要查看 `hpcc` 套件中每个用例的名称和结果，执行 `./ns3 run --no-build "test-runner --suite=hpcc --verbose"`。
 
 ## 2. 运行自带的 HPCC 实验
 
@@ -88,21 +89,67 @@ FLOWS
 
 DCQCN 每次因 CNP 执行降速时，会重启恢复定时器并将两个阶段计数和累计字节清零。此后，每过 `RP_TIMER` 微秒或每发送 `RP_BYTE_RESET` 字节，对应的计数加一，再更新速率。设 `F = FAST_RECOVERY_TIMES`，两项计数都小于 `F` 时执行快速恢复，两项都大于 `F` 时使用 `RATE_HAI`，其余情况使用 `RATE_AI`。字节阈值为零时沿用移植前的定时器阶段规则。[DCQCN 论文图 7](https://acn-2025.github.io/papers/DCQCN.pdf)
 
-## 5. 读取结果和排查问题
+## 5. 按流大小分布生成流量
+
+生成器使用 Python 3 标准库。沿用第 2 节的 `repo` 和 `work`，下面的示例在自带星形拓扑中选主机 1、2、3，按 AliStorage 分布生成流量。它单独保存配置、trace 和 FCT，便于随后分析。
+
+```bash
+gen="$repo/contrib/hpcc/traffic_gen"
+python3 "$gen/traffic_gen.py" -c "$gen/AliStorage2019.txt" \
+  -n 3 --first-host 1 -b 100G -l 0.1 -t 0.0002 --seed 7 -o "$work/mix/generated.txt"
+head -n 4 "$work/mix/generated.txt"
+sed -e 's|^FLOW_FILE .*|FLOW_FILE mix/generated.txt|' \
+    -e 's|^FCT_OUTPUT_FILE .*|FCT_OUTPUT_FILE mix/fct_generated_hp.txt|' \
+    -e 's|^TRACE_OUTPUT_FILE .*|TRACE_OUTPUT_FILE mix/generated.tr|' \
+    -e 's|^PFC_OUTPUT_FILE .*|PFC_OUTPUT_FILE mix/pfc_generated.txt|' \
+    -e 's|^QLEN_MON_FILE .*|QLEN_MON_FILE mix/qlen_generated.txt|' \
+    -e 's|^SIMULATOR_STOP_TIME .*|SIMULATOR_STOP_TIME 2.02|' \
+    -e 's|^QLEN_MON_END .*|QLEN_MON_END 2001000000|' \
+    "$work/mix/config.txt" > "$work/mix/config_generated.txt"
+./ns3 run --no-build --cwd="$work" scratch/hpcc/third -- mix/config_generated.txt
+wc -l "$work/mix/fct_generated_hp.txt"
+```
+
+`-n` 个连续主机从 `--first-host` 开始编号。默认从 0 开始，适用于 `fat.txt` 的主机布局。每个源主机按泊松过程发起流，均匀选择另一个主机为目的地。`-l` 是相对主机带宽 `-b` 的目标负载比例，`-t` 是从仿真时间 2 s 起算的到达窗口，单位为秒。仿真停止时间应为最后一批流留出传输时间。固定 `--seed` 可重复生成相同的输入。以上命令在本次验证中生成了 24 条流，FCT 文件也有 24 行。
+
+内置 CDF 有 `WebSearch_distribution.txt`（默认）、`FbHdp_distribution.txt`、`AliStorage2019.txt` 和 `GoogleRPC2008.txt`。自定义文件每行写“流大小（字节） 累计百分数”，两列严格递增，百分数从 0 到 100，相邻点间线性插值。
+
+## 6. 读取结果和排查问题
 
 | 默认文件 | 如何读取 |
 | --- | --- |
 | `mix/fct.txt` | 每条已完成流一行。八列依次为源 IPv4、目的 IPv4（均为十六进制）、源端口、目的端口、数据量（字节）、开始时间（ns）、实际 FCT（ns）、估算的独占链路 FCT（ns）。第 7 列除以第 8 列可得该流的 FCT 放大倍数。 |
 | `mix/pfc.txt` | 每个接收的 PFC 事件一行，五列依次为时间（ns）、节点编号、节点类型（0 为主机，1 为交换机）、接口编号和动作（1 为暂停，0 为恢复）。仿真期间没有 PFC 事件时文件可以为空。 |
 | `mix/qlen.txt` | 按时间输出各交换机端口的队列长度直方图。每行先给出节点和端口，再列出各长度区间的采样次数，每个区间宽 1000 字节。 |
-| `mix/mix.tr` | 二进制文件，先记录端口速率和窗口设置，再记录逐包事件。可用旧库的 `analysis/trace_reader` 读取。 |
+| `mix/mix.tr` | 二进制文件，先记录端口速率和窗口设置，再记录逐包事件。可用本仓库的 `trace_reader` 读取。 |
 
-如果旧库在本仓库旁边，可从仓库根目录编译读取器，用时间过滤默认实验中的首批发送事件。
+### 查看逐包 trace
+
+从仓库根目录用 Make 和 C++17 编译两个分析工具。下面的命令读取第 5 节生成的 trace，筛选交换机 0 在前 10 微秒记录的 UDP 数据包。
 
 ```bash
-upstream=../High-Precision-Congestion-Control
-c++ -O2 -std=gnu++11 "$upstream/analysis/trace_reader.cpp" -o "$work/trace_reader"
-"$work/trace_reader" "$work/mix/mix.tr" 'time=2000000000'
+analysis="$repo/contrib/hpcc/analysis"
+make -C "$analysis" OUT="$work/bin"
+"$work/bin/trace_reader" "$work/mix/generated.tr" 'node=0&(time<2000010000&l3Prot=0x11)'
 ```
+
+省略表达式会输出全部记录。过滤器接受十进制、十六进制、比较运算符、`&`、`|` 和括号。可以用 `queue=节点,接口,队列` 筛队列，用 `biflow=源IP,目的IP,源端口,目的端口` 同时筛数据及反方向 ACK。表达式用单引号传给 shell。输出依次给出时间（ns）、节点、接口和队列、队列字节数、事件以及协议字段。`U` 表示 UDP 数据，`A` 表示 ACK，`P` 表示 PFC。trace 使用本机二进制布局，跨机器读取时需要兼容的字节序与结构体布局。
+
+### 按流大小分析 FCT
+
+第 3 节的三个预设会生成同前缀的 FCT 文件。用 `-p` 指定包含目录的前缀，`-c` 按输出顺序列出文件名后缀。以下示例按大小将每组的两条流分成两桶。
+
+```bash
+"$work/bin/fct_analysis" -p "$work/mix/fct_topology_flow" -c hp95,dcqcn,dctcp -s 50
+```
+
+也可用生成流量时的 CDF 定义相同的字节边界，再分析第 5 节的输出。Python 3 版和 C++ 版支持相同的分桶参数。
+
+```bash
+python3 "$gen/flow_bins.py" -c "$gen/AliStorage2019.txt" > "$work/bins.txt"
+python3 "$analysis/fct_analysis.py" -p "$work/mix/fct_generated" -c hp -S "$work/bins.txt"
+```
+
+每行的前两列是该桶的累计比例（0 到 1）和流大小上界（字节）。`-s` 按各算法各自的样本排名分桶，第二列取首个算法的上界；`-S` 按文件指定的共同大小上界分桶。其后每个算法依次占三列，分别是桶内 FCT 放大倍数的 P50、P95、P99，放大倍数按 `max(1, 实际 FCT / 独占链路 FCT)` 计算。空桶显示 `nan`。默认 `-t 0` 选目的端口 100 的普通流，`-t 1` 选端口 200 的 incast 流，`-t 2` 同时选两类。默认仅纳入完成时刻严格早于 3 s 的流，可用 `-T` 指定截止时间（ns）。
 
 若提示打不开配置或拓扑文件，先检查 `--cwd` 指向的目录下是否存在 `mix/`。若 FCT 行数偏少，对照流量文件首行、最后一条流的开始时间和 `SIMULATOR_STOP_TIME`。更换拓扑后若报告缺少 ECN 阈值，按拓扑实际端口速率补全三个速率映射。

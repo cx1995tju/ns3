@@ -57,7 +57,7 @@ Queue-length histograms go to ``QLEN_MON_FILE``.
 
 With ``ENABLE_TRACE 1``, the binary packet trace begins with ``SimSetting``
 and continues with ``TraceFormat`` records. It retains the upstream native
-binary layout for use with the original ``analysis/trace_reader`` on a
+binary layout for use with the bundled ``analysis/trace_reader`` on a
 matching architecture. The model accounts for 14 bytes of link-layer header.
 HPCC-PINT accounts for the selected one- or two-byte telemetry width.
 
