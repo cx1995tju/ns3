@@ -120,6 +120,7 @@ class RdmaHw : public Object
     double m_rateOnFirstCNP; // the fraction of line rate to set on first CNP
     bool m_EcnClampTgtRate;
     double m_rpgTimeReset;
+    uint32_t m_rpgByteReset; ///< DCQCN byte threshold (zero selects legacy timer-only recovery)
     double m_rateDecreaseInterval;
     uint32_t m_rpgThreshold;
     double m_alpha_resume_interval;

@@ -17,6 +17,7 @@ ALPHA_RESUME_INTERVAL 1 {for DCQCN: the interval of update alpha}
 RATE_DECREASE_INTERVAL 4 {for DCQCN: the interval of rate decrease}
 CLAMP_TARGET_RATE 0 {for DCQCN: whether to reduce target rate upon consecutive rate decrease}
 RP_TIMER 900  {for DCQCN: the interval of rate increase}
+RP_BYTE_RESET 10000000 {for DCQCN: transmitted RDMA frame bytes per rate increase event; 0 selects legacy timer-only recovery}
 EWMA_GAIN 0.00390625 {for DCQCN and DCTCP: the g of EWMA}
 FAST_RECOVERY_TIMES 1 {for DCQCN: number of times of increase for fast recovery}
 RATE_AI 50Mb/s {Additive increase (not for DCTCP)}

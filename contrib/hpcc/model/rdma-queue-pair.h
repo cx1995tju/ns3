@@ -47,7 +47,9 @@ class RdmaQueuePair : public Object
         bool m_first_cnp;         // indicate if the current CNP is the first CNP
         EventId m_eventDecreaseRate;
         bool m_decrease_cnp_arrived; // indicate if CNP arrived in the last slot
-        uint32_t m_rpTimeStage;
+        uint64_t m_rpTimeStage{};    ///< Timer expirations since the last rate decrease
+        uint64_t m_rpByteStage{};    ///< Byte thresholds crossed since the last rate decrease
+        uint64_t m_rpBytes{};        ///< Transmitted frame bytes toward the next byte threshold
         EventId m_rpTimer;
     } mlx;
 

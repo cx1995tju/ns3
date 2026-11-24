@@ -21,6 +21,7 @@ ALPHA_RESUME_INTERVAL {t_alpha}
 RATE_DECREASE_INTERVAL {t_dec}
 CLAMP_TARGET_RATE 0
 RP_TIMER {t_inc}
+RP_BYTE_RESET {byte_reset}
 EWMA_GAIN {g}
 FAST_RECOVERY_TIMES 1
 RATE_AI {ai}Mb/s
@@ -73,6 +74,8 @@ if __name__ == "__main__":
     parser.add_argument("--down", default="0 0 0", help="link-down time and endpoints")
     parser.add_argument("--topo", default="fat", help="topology file stem in mix/")
     parser.add_argument("--utgt", type=int, default=95, help="HPCC target utilization in percent")
+    parser.add_argument("--rp-byte-reset", type=int, default=10_000_000,
+                        help="DCQCN recovery threshold in bytes (0 for legacy timer-only recovery)")
     parser.add_argument("--mi", type=int, default=0, help="MI_THRESH")
     parser.add_argument("--hpai", type=int, default=0, help="HPCC additive increase in Mb/s")
     parser.add_argument("--pint_log_base", type=float, default=1.01)
@@ -84,6 +87,8 @@ if __name__ == "__main__":
     bw = args.bw
     if bw <= 0:
         parser.error("--bw must be positive")
+    if not 0 <= args.rp_byte_reset <= 0xffffffff:
+        parser.error("--rp-byte-reset must be an unsigned 32-bit byte count")
     cc = args.cc
     failure = "_down" if args.down != "0 0 0" else ""
     rates = [bw, 4 * bw]
@@ -92,7 +97,7 @@ if __name__ == "__main__":
         return "2 " + " ".join(f"{r * 10**9} {value}" for r, value in zip(rates, values))
 
     params = dict(topo=args.topo, trace=args.trace, cc=cc, failure=failure,
-                  t_alpha=1, t_dec=4, t_inc=300, g=0.00390625,
+                  t_alpha=1, t_dec=4, t_inc=300, byte_reset=args.rp_byte_reset, g=0.00390625,
                   dctcp_ai=1000, has_win=0, vwin=0, us=0, int_multi=1, ack_prio=1,
                   u_tgt=args.utgt / 100, mi=args.mi, pint_log_base=args.pint_log_base,
                   pint_prob=args.pint_prob, link_down=args.down, enable_tr=args.enable_tr,

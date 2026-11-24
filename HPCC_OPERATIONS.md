@@ -50,6 +50,7 @@ awk '{printf "%s -> %s  %.0f MB  %.3f ms\n", $1, $2, $5/1e6, $7/1e6}' "$work/mix
 | `--cc` | `hp`、`dcqcn`、`dctcp` 分别选择三种主算法；`timely` 和 `hpccPint` 也可用。 |
 | `--topo`、`--trace` | 分别选择 `mix/<拓扑名>.txt` 和 `mix/<流量名>.txt`，传入文件名时省略扩展名。 |
 | `--bw` | 主机网卡速率，单位 Gb/s，用于计算速率增量和 ECN 阈值等预设参数。仿真实际链路速率取自拓扑文件。 |
+| `--rp-byte-reset` | DCQCN 字节阈值，默认 10000000（10 MB）。例如 `--cc dcqcn --rp-byte-reset 65536` 每发送 64 KiB 触发一次恢复，设为 0 可复现旧版纯定时器实验。 |
 | `--enable_tr 1` | 为该次预设实验开启逐包记录。记录哪些节点由 `TRACE_FILE` 指定，预设使用 `mix/trace.txt`。 |
 
 ## 4. 自定义拓扑、流量与配置
@@ -79,10 +80,13 @@ FLOWS
 | 配置项 | 含义 |
 | --- | --- |
 | `CC_MODE` | 1 为 DCQCN，3 为 HPCC，8 为 DCTCP，7 为 TIMELY，10 为 HPCC-PINT。整组算法参数可从对应的脚本预设取得。 |
+| `RP_BYTE_RESET` | 对应 `ns3::RdmaHw::RPByteReset`，仅用于 DCQCN。按网卡发出的 RDMA 数据帧大小计数，含协议头和重传，跨阈值的余数留给下一次。 |
 | `SIMULATOR_STOP_TIME` | 仿真停止时间，单位秒。应覆盖最后一条流的开始时间及传输时间。 |
 | `KMIN_MAP`、`KMAX_MAP`、`PMAX_MAP` | 格式为条目数，后跟若干对“链路速率（bit/s） 值”。交换机每种端口速率均要有对应条目。两个阈值以 1000 字节为单位，概率取 0 到 1。 |
 | `QLEN_MON_START`、`QLEN_MON_END` | 交换机队列采样窗口，单位纳秒。 |
 | `LINK_DOWN` | 三个值依次为相对 2 s 的偏移（微秒）和链路两端的节点编号；偏移大于零时触发。 |
+
+DCQCN 每次因 CNP 执行降速时，会重启恢复定时器并将两个阶段计数和累计字节清零。此后，每过 `RP_TIMER` 微秒或每发送 `RP_BYTE_RESET` 字节，对应的计数加一，再更新速率。设 `F = FAST_RECOVERY_TIMES`，两项计数都小于 `F` 时执行快速恢复，两项都大于 `F` 时使用 `RATE_HAI`，其余情况使用 `RATE_AI`。字节阈值为零时沿用移植前的定时器阶段规则。[DCQCN 论文图 7](https://acn-2025.github.io/papers/DCQCN.pdf)
 
 ## 5. 读取结果和排查问题
 

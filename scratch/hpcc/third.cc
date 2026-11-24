@@ -629,6 +629,14 @@ main(int argc, char* argv[])
                 rp_timer = v;
                 std::cout << "RP_TIMER\t\t\t" << rp_timer << "\n";
             }
+            else if (key == "RP_BYTE_RESET")
+            {
+                int64_t bytes;
+                NS_ABORT_MSG_IF(!(conf >> bytes) || bytes < 0 || bytes > UINT32_MAX,
+                                "RP_BYTE_RESET must be an unsigned 32-bit byte count");
+                Config::SetDefault("ns3::RdmaHw::RPByteReset", UintegerValue(bytes));
+                std::cout << "RP_BYTE_RESET\t\t\t" << bytes << '\n';
+            }
             else if (key.compare("EWMA_GAIN") == 0)
             {
                 double v;

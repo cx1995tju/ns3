@@ -6,10 +6,10 @@
 
 发送端由 `RdmaClient` 发起流，`RdmaDriver` 将队列对分配给网卡，`RdmaHw` 根据 ACK/NACK、在途窗口和当前速率调度发送。交换机按 ECMP 表选出端口，在出口按队列积压标记 ECN，在入口按优先级触发 PFC。接收端在 RDMA ACK 中回送拥塞标记和遥测信息。
 
-| 算法 | `CC_MODE` | 本次移植保留的行为 |
+| 算法 | `CC_MODE` | 仿真行为 |
 | --- | --- | --- |
 | HPCC | 3 | 交换机记录每跳时间、已发送字节、队列长度和链路速率，发送端从 ACK 中取回 INT 并更新速率。 |
-| DCQCN | 1 | 接收端回显 ECN，发送端按上游 Mellanox 模型更新拥塞估计、执行降速和定时恢复。 |
+| DCQCN | 1 | 接收端回显 ECN，发送端更新拥塞估计并降速，此后由每个 QP 的定时器和已发送字节数独立触发速率恢复。 |
 | DCTCP | 8 | 使用上游的硬件 RDMA 模型，按线速启动，在发送端依据收到的标记比例调整速率。 |
 
 同一入口还支持 TIMELY（模式 7）和 HPCC-PINT（模式 10）。HPCC-PINT 按配置使用一或两个字节的遥测字段。
@@ -29,6 +29,6 @@ ns-3 原有模块的改动集中在 `PointToPointNetDevice`。接收处理和一
 
 ## 验证结果
 
-- [hpcc 测试套件](contrib/hpcc/test/hpcc-test-suite.cc)的五个用例均通过。两个用例检查队列调度与记账、PINT 字段宽度与 INT 计数回绕。另三个用例让两个 100 Gb/s 发送端争用一个 25 Gb/s 出口，分别验证 HPCC、DCQCN 和 DCTCP 的最终 ACK、ECN 回显、发送端降速和 PFC 恢复；HPCC 还检查 ACK 中的瓶颈速率和积压量。
+- [hpcc 测试套件](contrib/hpcc/test/hpcc-test-suite.cc)的七个用例均通过。两个用例检查队列调度与记账、PINT 字段宽度与 INT 计数回绕。两个 DCQCN 用例检查字节触发、定时触发、阶段切换、降速复位及纯定时器兼容模式。另三个用例让两个 100 Gb/s 发送端争用一个 25 Gb/s 出口，分别验证 HPCC、DCQCN 和 DCTCP 的最终 ACK、ECN 回显、发送端降速和 PFC 恢复；HPCC 还检查 ACK 中的瓶颈速率和积压量。
 - 原有的 `devices-point-to-point` 回归通过。原版 `mix/config.txt` 选择 HPCC，本次运行中，两条 200 MB 流均完成，流完成时间约为 **36.14 ms** 和 **36.69 ms**。这两个数值供复现实验时参考。
 - 已运行 `fat.txt` 和 `ali_32host_10rack.txt` 的跨机架流量，以及多跳转发、链路中断后重路由、TIMELY 和两种宽度的 HPCC-PINT。验证范围为 ns-3.49 的功能和 trace 可读性，与 ns-3.18 的逐包时序对照尚未进行。

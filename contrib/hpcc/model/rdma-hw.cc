@@ -81,13 +81,19 @@ RdmaHw::GetTypeId(void)
                           DoubleValue(1500.0),
                           MakeDoubleAccessor(&RdmaHw::m_rpgTimeReset),
                           MakeDoubleChecker<double>())
+            .AddAttribute("RPByteReset",
+                          "Transmitted RDMA frame bytes per DCQCN recovery event "
+                          "(zero selects legacy timer-only recovery)",
+                          UintegerValue(10'000'000),
+                          MakeUintegerAccessor(&RdmaHw::m_rpgByteReset),
+                          MakeUintegerChecker<uint32_t>())
             .AddAttribute("RateDecreaseInterval",
                           "The interval of rate decrease check",
                           DoubleValue(4.0),
                           MakeDoubleAccessor(&RdmaHw::m_rateDecreaseInterval),
                           MakeDoubleChecker<double>())
             .AddAttribute("FastRecoveryTimes",
-                          "The rate increase timer at RP",
+                          "DCQCN stage threshold for fast recovery and additive increase",
                           UintegerValue(5),
                           MakeUintegerAccessor(&RdmaHw::m_rpgThreshold),
                           MakeUintegerChecker<uint32_t>())
@@ -776,7 +782,17 @@ void
 RdmaHw::PktSent(Ptr<RdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap)
 {
     qp->lastPktSize = pkt->GetSize();
-    UpdateNextAvail(qp, interframeGap, pkt->GetSize());
+    if (m_cc_mode == 1 && m_rpgByteReset > 0 && qp->mlx.m_rpTimer.IsPending())
+    {
+        qp->mlx.m_rpBytes += qp->lastPktSize;
+        while (qp->mlx.m_rpBytes >= m_rpgByteReset)
+        {
+            qp->mlx.m_rpBytes -= m_rpgByteReset;
+            ++qp->mlx.m_rpByteStage;
+            RateIncEventMlx(qp);
+        }
+    }
+    UpdateNextAvail(qp, interframeGap, qp->lastPktSize);
 }
 
 void
@@ -861,21 +877,15 @@ RdmaHw::CheckRateDecreaseMlx(Ptr<RdmaQueuePair> q)
     ScheduleDecreaseRateMlx(q, 0);
     if (q->mlx.m_decrease_cnp_arrived)
     {
-        bool clamp = true;
-        if (!m_EcnClampTgtRate)
-        {
-            if (q->mlx.m_rpTimeStage == 0)
-            {
-                clamp = false;
-            }
-        }
-        if (clamp)
+        if (m_EcnClampTgtRate || q->mlx.m_rpTimeStage > 0 || q->mlx.m_rpByteStage > 0)
         {
             q->mlx.m_targetRate = q->m_rate;
         }
         q->m_rate = std::max(m_minRate, q->m_rate * (1 - q->mlx.m_alpha / 2));
         // reset rate increase related things
         q->mlx.m_rpTimeStage = 0;
+        q->mlx.m_rpByteStage = 0;
+        q->mlx.m_rpBytes = 0;
         q->mlx.m_decrease_cnp_arrived = false;
         Simulator::Cancel(q->mlx.m_rpTimer);
         q->mlx.m_rpTimer = Simulator::Schedule(MicroSeconds(m_rpgTimeReset),
@@ -900,19 +910,22 @@ RdmaHw::RateIncEventTimerMlx(Ptr<RdmaQueuePair> q)
 {
     q->mlx.m_rpTimer =
         Simulator::Schedule(MicroSeconds(m_rpgTimeReset), &RdmaHw::RateIncEventTimerMlx, this, q);
+    ++q->mlx.m_rpTimeStage;
     RateIncEventMlx(q);
-    q->mlx.m_rpTimeStage++;
 }
 
 void
 RdmaHw::RateIncEventMlx(Ptr<RdmaQueuePair> q)
 {
-    // check which increase phase: fast recovery, active increase, hyper increase
-    if (q->mlx.m_rpTimeStage < m_rpgThreshold)
+    const auto timeStage = q->mlx.m_rpTimeStage;
+    const auto byteStage = m_rpgByteReset ? q->mlx.m_rpByteStage : timeStage;
+    // Timer-only recovery historically selected the phase before advancing the timer stage.
+    const uint64_t threshold = uint64_t{m_rpgThreshold} + (m_rpgByteReset == 0);
+    if (std::max(timeStage, byteStage) < threshold)
     { // fast recovery
         FastRecoveryMlx(q);
     }
-    else if (q->mlx.m_rpTimeStage == m_rpgThreshold)
+    else if (std::min(timeStage, byteStage) <= threshold)
     { // active increase
         ActiveIncreaseMlx(q);
     }
