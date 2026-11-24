@@ -13,6 +13,7 @@
 namespace ns3
 {
 
+    // 一个 RdmaHw 可以对应多个 interface, 即 网卡
 struct RdmaInterfaceMgr
 {
     Ptr<QbbNetDevice> dev;
@@ -45,7 +46,7 @@ class RdmaHw : public Object
     DataRate m_minRate; //< Min sending rate
     uint32_t m_mtu;
     uint32_t m_cc_mode;
-    double m_nack_interval;
+    double m_nack_interval; // 控制 nack 间隔
     uint32_t m_chunk;
     uint32_t m_ack_interval;
     bool m_backto0;
@@ -65,7 +66,7 @@ class RdmaHw : public Object
     void Setup(QpCompleteCallback cb); // setup shared data and callbacks with the QbbNetDevice
     static uint64_t GetQpKey(uint32_t dip,
                              uint16_t sport,
-                             uint16_t pg); // get the lookup key for m_qpMap
+                             uint16_t pg); // get the lookup key for m_qpMap, pg: priority group
     Ptr<RdmaQueuePair> GetQp(uint32_t dip, uint16_t sport, uint16_t pg); // get the qp
     uint32_t GetNicIdxOfQp(Ptr<RdmaQueuePair> qp); // get the NIC index of the qp
     void AddQueuePair(uint64_t size,
@@ -76,7 +77,7 @@ class RdmaHw : public Object
                       uint16_t _dport,
                       uint32_t win,
                       uint64_t baseRtt,
-                      Callback<void> notifyAppFinish); // add a new qp (new send)
+                      Callback<void> notifyAppFinish); // add a new qp (new send), 创建 QP
     void DeleteQueuePair(Ptr<RdmaQueuePair> qp);
 
     Ptr<RdmaRxQueuePair> GetRxQp(uint32_t sip,
@@ -88,6 +89,7 @@ class RdmaHw : public Object
     uint32_t GetNicIdxOfRxQp(Ptr<RdmaRxQueuePair> q); // get the NIC index of the rxQp
     void DeleteRxQp(uint32_t dip, uint16_t pg, uint16_t dport);
 
+    // 不同报文的处理
     int ReceiveUdp(Ptr<Packet> p, CustomHeader& ch);
     int ReceiveCnp(Ptr<Packet> p, CustomHeader& ch);
     int ReceiveAck(Ptr<Packet> p, CustomHeader& ch); // handle both ACK and NACK
@@ -96,20 +98,21 @@ class RdmaHw : public Object
                     ch); // callback function that the QbbNetDevice should use when receive packets.
                          // Only NIC can call this function. And do not call this upon PFC
 
+    // 判断: 这个数据包是按序到达、前面有缺口，还是已经收过？
     int ReceiverCheckSeq(uint32_t seq, Ptr<RdmaRxQueuePair> q, uint32_t size);
     void AddHeader(Ptr<Packet> p, uint16_t protocolNumber);
     static uint16_t EtherToPpp(uint16_t protocol);
 
-    void RecoverQueue(Ptr<RdmaQueuePair> qp);
-    void QpComplete(Ptr<RdmaQueuePair> qp);
+    void RecoverQueue(Ptr<RdmaQueuePair> qp); // GBN
+    void QpComplete(Ptr<RdmaQueuePair> qp); // 确定一个 QP 完成传输
     void SetLinkDown(Ptr<QbbNetDevice> dev);
 
     // call this function after the NIC is setup
     void AddTableEntry(Ipv4Address& dstAddr, uint32_t intf_idx);
     void ClearTable();
-    void RedistributeQp();
+    void RedistributeQp(); // 处理路由表更新事件, 比如某个网卡 down 了.
 
-    Ptr<Packet> GetNxtPacket(Ptr<RdmaQueuePair> qp); // get next packet to send, inc snd_nxt
+    Ptr<Packet> GetNxtPacket(Ptr<RdmaQueuePair> qp); // get next packet to send, inc snd_nxt, 构造报文
     void PktSent(Ptr<RdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap);
     void UpdateNextAvail(Ptr<RdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size);
     void ChangeRate(Ptr<RdmaQueuePair> qp, DataRate new_rate);
@@ -129,16 +132,16 @@ class RdmaHw : public Object
 
     // the Mellanox's version of alpha update:
     // every fixed time slot, update alpha.
-    void UpdateAlphaMlx(Ptr<RdmaQueuePair> q);
+    void UpdateAlphaMlx(Ptr<RdmaQueuePair> q); // 两个更新时机: alpha timer, receive cnp
     void ScheduleUpdateAlphaMlx(Ptr<RdmaQueuePair> q);
 
     // Mellanox's version of CNP receive
-    void cnp_received_mlx(Ptr<RdmaQueuePair> q);
+    void cnp_received_mlx(Ptr<RdmaQueuePair> q); // cnp 的处理
 
     // Mellanox's version of rate decrease
     // It checks every m_rateDecreaseInterval if CNP arrived (m_decrease_cnp_arrived).
     // If so, decrease rate, and reset all rate increase related things
-    void CheckRateDecreaseMlx(Ptr<RdmaQueuePair> q);
+    void CheckRateDecreaseMlx(Ptr<RdmaQueuePair> q); // dec rate
     void ScheduleDecreaseRateMlx(Ptr<RdmaQueuePair> q, uint32_t delta);
 
     // Mellanox's version of rate increase

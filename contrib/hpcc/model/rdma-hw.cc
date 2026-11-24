@@ -669,7 +669,7 @@ RdmaHw::EtherToPpp(uint16_t proto)
 
 void
 RdmaHw::RecoverQueue(Ptr<RdmaQueuePair> qp)
-{
+{ // GBN, 要重传
     qp->snd_nxt = qp->snd_una;
 }
 
@@ -703,6 +703,7 @@ RdmaHw::SetLinkDown(Ptr<QbbNetDevice> dev)
     printf("RdmaHw: node:%u a link down\n", m_node->GetId());
 }
 
+// 建立 ip 和 interface 的关系
 void
 RdmaHw::AddTableEntry(Ipv4Address& dstAddr, uint32_t intf_idx)
 {
@@ -792,14 +793,14 @@ RdmaHw::PktSent(Ptr<RdmaQueuePair> qp, Ptr<Packet> pkt, Time interframeGap)
             RateIncEventMlx(qp);
         }
     }
-    UpdateNextAvail(qp, interframeGap, qp->lastPktSize);
+    UpdateNextAvail(qp, interframeGap, qp->lastPktSize); // 控制发包间隔
 }
 
 void
 RdmaHw::UpdateNextAvail(Ptr<RdmaQueuePair> qp, Time interframeGap, uint32_t pkt_size)
 {
     Time sendingTime;
-    if (m_rateBound)
+    if (m_rateBound) // 根据速率算出来的
     {
         sendingTime = interframeGap + qp->m_rate.CalculateBytesTxTime(pkt_size);
     }
@@ -807,7 +808,7 @@ RdmaHw::UpdateNextAvail(Ptr<RdmaQueuePair> qp, Time interframeGap, uint32_t pkt_
     {
         sendingTime = interframeGap + qp->m_max_rate.CalculateBytesTxTime(pkt_size);
     }
-    qp->m_nextAvail = Simulator::Now() + sendingTime;
+    qp->m_nextAvail = Simulator::Now() + sendingTime; // 下一次发送时间
 }
 
 void
@@ -832,11 +833,11 @@ RdmaHw::UpdateAlphaMlx(Ptr<RdmaQueuePair> q)
 {
     if (q->mlx.m_alpha_cnp_arrived)
     {
-        q->mlx.m_alpha = (1 - m_g) * q->mlx.m_alpha + m_g; // binary feedback
+        q->mlx.m_alpha = (1 - m_g) * q->mlx.m_alpha + m_g; // binary feedback, 增大 alpha
     }
     else
     {
-        q->mlx.m_alpha = (1 - m_g) * q->mlx.m_alpha; // binary feedback
+        q->mlx.m_alpha = (1 - m_g) * q->mlx.m_alpha; // binary feedback, 减小 alpha
     }
     q->mlx.m_alpha_cnp_arrived = false; // clear the CNP_arrived bit
     ScheduleUpdateAlphaMlx(q);
@@ -918,7 +919,7 @@ void
 RdmaHw::RateIncEventMlx(Ptr<RdmaQueuePair> q)
 {
     const auto timeStage = q->mlx.m_rpTimeStage;
-    const auto byteStage = m_rpgByteReset ? q->mlx.m_rpByteStage : timeStage;
+    const auto byteStage = m_rpgByteReset ? q->mlx.m_rpByteStage : timeStage; // 为了兼容
     // Timer-only recovery historically selected the phase before advancing the timer stage.
     const uint64_t threshold = uint64_t{m_rpgThreshold} + (m_rpgByteReset == 0);
     if (std::max(timeStage, byteStage) < threshold)

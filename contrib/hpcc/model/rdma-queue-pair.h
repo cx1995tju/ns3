@@ -122,6 +122,7 @@ class RdmaQueuePair : public Object
     uint64_t HpGetCurWin(); // window size calculated from hp.m_curRate, used by HPCC
 };
 
+// QP 在 rx 侧的体现
 class RdmaRxQueuePair : public Object
 { // Rx side queue pair
   public:
