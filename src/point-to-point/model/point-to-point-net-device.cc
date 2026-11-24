@@ -272,7 +272,12 @@ PointToPointNetDevice::TransmitComplete()
 
     m_phyTxEndTrace(m_currentPkt);
     m_currentPkt = nullptr;
+    DequeueAndTransmit();
+}
 
+void
+PointToPointNetDevice::DequeueAndTransmit()
+{
     Ptr<Packet> p = m_queue->Dequeue();
     if (!p)
     {

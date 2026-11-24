@@ -141,7 +141,7 @@ class PointToPointNetDevice : public NetDevice
      *
      * @param p Ptr to the received packet.
      */
-    void Receive(Ptr<Packet> p);
+    virtual void Receive(Ptr<Packet> p);
 
     // The remaining methods are documented in ns3::NetDevice*
 
@@ -196,6 +196,7 @@ class PointToPointNetDevice : public NetDevice
     void DoMpiReceive(Ptr<Packet> p);
 
   private:
+    friend class QbbNetDevice;
     /**
      * @brief Dispose of the object
      */
@@ -249,6 +250,9 @@ class PointToPointNetDevice : public NetDevice
      * of sending a packet out on the channel.
      */
     void TransmitComplete();
+
+    /// Select and transmit the next packet when the transmitter becomes idle.
+    virtual void DequeueAndTransmit();
 
     /**
      * @brief Make the link up and running
